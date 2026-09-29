@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * 관리자 계정으로 공용 인스턴스에 붙는 JDBC 기반 공통 부분.
@@ -44,6 +45,14 @@ abstract class JdbcEngineProvisioner implements EngineProvisioner, DisposableBea
             Throwable cause = e.getMostSpecificCause();
             throw new ProvisioningException(engine().code() + ": " + cause.getMessage(),
                     cause instanceof SQLException ? cause : null);
+        }
+    }
+
+    protected List<String> queryForStrings(String sql) {
+        try {
+            return jdbc.queryForList(sql, String.class);
+        } catch (DataAccessException e) {
+            throw new ProvisioningException(engine().code() + ": " + e.getMostSpecificCause().getMessage(), null);
         }
     }
 

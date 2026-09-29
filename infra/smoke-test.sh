@@ -7,7 +7,7 @@
 #   2. 프로젝트 DB 2개 생성 → RDS 마스터 권한으로 CREATE ROLE / GRANT / CREATE DATABASE 가 되는지
 #   3. SSM 에 비밀번호 저장됐는지
 #   4. 테넌트 계정으로 자기 DB 접속 + 테이블 생성
-#   5. 다른 테넌트 DB 접속 거부 / 틀린 비밀번호 거부
+#   5. 다른 테넌트 DB / 기본 postgres DB 접속 거부, 틀린 비밀번호 거부
 #   6. (lily-blog-sample 이미지가 있으면) 샘플 앱 배포
 #   7. 삭제 → DROP DATABASE WITH (FORCE) / DROP ROLE, SSM·DynamoDB 정리 확인
 set -uo pipefail
@@ -75,6 +75,8 @@ R=$(psql_as "$A_USER" "$A_PW" "$A_USER" "CREATE TABLE t(id int); INSERT INTO t V
 echo "## 5. 격리"
 R=$(psql_as "$A_USER" "$A_PW" "$B_USER" "SELECT 1")
 echo "$R" | grep -q "CONNECT privilege" && ok "다른 테넌트 DB 접속 거부" || fail "격리 실패: $R"
+R=$(psql_as "$A_USER" "$A_PW" "postgres" "SELECT 1")
+echo "$R" | grep -q "CONNECT privilege" && ok "기본 postgres DB 접속 거부 (다른 DB 이름 목록 노출 차단)" || fail "기본 DB 접속됨: $R"
 R=$(psql_as "$A_USER" "wrong-password" "$A_USER" "SELECT 1")
 echo "$R" | grep -q "password authentication failed" && ok "틀린 비밀번호 거부" || fail "비밀번호 검사 실패: $R"
 

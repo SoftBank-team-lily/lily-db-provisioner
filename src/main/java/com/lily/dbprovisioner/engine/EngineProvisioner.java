@@ -15,6 +15,12 @@ public interface EngineProvisioner {
 
     int publicPort();
 
+    /**
+     * 공용 인스턴스 자체에 한 번 적용할 보안 설정. 여러 번 호출해도 안전해야 한다.
+     * 기동 시 한 번 시도하고, 실패하면(인스턴스가 아직 안 떠 있는 등) 첫 create 때 다시 시도한다.
+     */
+    default void prepare() {}
+
     /** DB 이름과 계정 이름은 같은 값(name)을 쓴다 */
     void create(String name, String password, int connectionLimit);
 

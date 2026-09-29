@@ -2,6 +2,7 @@
 
 프로비저너를 실제 AWS 에서 검증하기 위한 최소 인프라.
 Terraform / AWS CLI 는 Docker 로 실행하므로 로컬 설치가 필요 없다 (`tf.sh`, `aws.sh`).
+`tf.sh` 는 provider 바이너리를 Docker 볼륨(`lily-tfdata`)에 둔다. OneDrive 같은 동기화 폴더에 두면 플러그인 기동이 타임아웃난다.
 
 ## 만드는 것
 
@@ -59,7 +60,7 @@ curl https://checkip.amazonaws.com        # 이 IP 를 allowed_cidrs 에 "x.x.x.
 프로비저너를 `prod` 프로파일로 띄워서 실제 RDS / DynamoDB / SSM 에 붙이고 확인한다.
 - RDS 마스터 계정으로 `CREATE ROLE` → `GRANT ... TO CURRENT_USER` → `CREATE DATABASE ... OWNER` 가 되는지
 - 비밀번호가 SSM SecureString 에 저장되는지
-- 테넌트 계정으로 자기 DB 사용 / 다른 테넌트 DB 접속 거부 / 틀린 비밀번호 거부
+- 테넌트 계정으로 자기 DB 사용 / 다른 테넌트 DB · 기본 `postgres` DB 접속 거부 / 틀린 비밀번호 거부
 - (`lily-blog-sample` 이미지가 있으면) 샘플 앱 배포 + Flyway
 - 삭제 시 `DROP DATABASE WITH (FORCE)` / `DROP ROLE` / SSM / DynamoDB 정리
 
