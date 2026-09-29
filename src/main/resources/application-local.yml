@@ -1,0 +1,5 @@
+# 로컬: DynamoDB Local (docker compose up -d dynamodb) 에 테이블을 자동 생성해서 쓴다
+provisioner:
+  dynamodb:
+    endpoint: ${DYNAMODB_ENDPOINT:http://localhost:8000}
+    create-table: true

@@ -1,0 +1,11 @@
+# cp terraform.tfvars.example terraform.tfvars 후 수정 (terraform.tfvars 는 커밋하지 않음)
+
+# 테스트 PC 공인 IP. 확인: curl https://checkip.amazonaws.com
+allowed_cidrs = ["x.x.x.x/32"]
+
+enable_postgres = true
+enable_mysql    = false   # MySQL 까지 검증하려면 true (비용 2배)
+
+# 월 예산 알림 (비우면 생성 안 함)
+budget_email     = ""
+budget_limit_usd = 20

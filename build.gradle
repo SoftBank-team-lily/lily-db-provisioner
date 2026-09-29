@@ -1,0 +1,43 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.4'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.lily'
+version = System.getenv('APP_VERSION') ?: '1.0.0'
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+}
+
+repositories { mavenCentral() }
+
+dependencyManagement {
+    imports { mavenBom 'software.amazon.awssdk:bom:2.29.0' }
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
+
+    // 플랫폼 메타데이터 (DynamoDB) + 비밀번호 보관소 (SSM)
+    implementation 'software.amazon.awssdk:dynamodb'
+    implementation 'software.amazon.awssdk:ssm'
+
+    // 공용 RDS 에 관리자 계정으로 DDL 실행
+    implementation 'org.springframework:spring-jdbc'
+    implementation 'com.zaxxer:HikariCP'
+    runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('test') { useJUnitPlatform() }
+
+tasks.named('bootJar') { archiveFileName = 'app.jar' }

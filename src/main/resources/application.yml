@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: db-provisioner
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+app:
+  version: ${APP_VERSION:dev}
+  color: ${APP_COLOR:blue}
+
+provisioner:
+  # 비어 있으면 /api/** 인증을 끈다 (로컬 전용). 운영에서는 반드시 설정
+  api-token: ${PROVISIONER_API_TOKEN:}
+  # 프로젝트 계정 하나가 열 수 있는 최대 커넥션 수
+  connection-limit: ${DB_CONNECTION_LIMIT:20}
+  # 플랫폼 메타데이터 테이블 (파티션 키 pk: String)
+  dynamodb:
+    table: ${DYNAMODB_TABLE:lily-managed-databases}
+    endpoint: ${DYNAMODB_ENDPOINT:}       # 비우면 AWS. DynamoDB Local 이면 http://localhost:8000
+    region: ${AWS_REGION:ap-northeast-2}
+    create-table: ${DYNAMODB_CREATE_TABLE:false}
+  secrets:
+    store: ${SECRET_STORE:memory}         # memory | ssm
+    ssm-prefix: ${SSM_PREFIX:/lily/db}
+  engines:
+    postgres:
+      enabled: ${PG_ENABLED:false}
+      admin-url: ${PG_ADMIN_URL:jdbc:postgresql://localhost:5432/postgres}
+      admin-username: ${PG_ADMIN_USERNAME:postgres}
+      admin-password: ${PG_ADMIN_PASSWORD:postgres}
+      public-host: ${PG_PUBLIC_HOST:localhost}
+      public-port: ${PG_PUBLIC_PORT:5432}
+    mysql:
+      enabled: ${MYSQL_ENABLED:false}
+      admin-url: ${MYSQL_ADMIN_URL:jdbc:mysql://localhost:3306/}
+      admin-username: ${MYSQL_ADMIN_USERNAME:root}
+      admin-password: ${MYSQL_ADMIN_PASSWORD:root}
+      public-host: ${MYSQL_PUBLIC_HOST:localhost}
+      public-port: ${MYSQL_PUBLIC_PORT:3306}

@@ -1,0 +1,54 @@
+# 로컬 통합 테스트용
+# - RDS 대신 Postgres / MySQL 컨테이너를 공용 인스턴스로 쓴다
+# - 플랫폼 메타데이터는 DynamoDB Local
+services:
+  dynamodb:
+    image: amazon/dynamodb-local:2.5.4
+    command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
+    ports:
+      - "8000:8000"
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 3s
+      retries: 20
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "13306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 3s
+      retries: 30
+
+  provisioner:
+    build: .
+    depends_on:
+      dynamodb: { condition: service_started }
+      postgres: { condition: service_healthy }
+      mysql: { condition: service_healthy }
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local       # DynamoDB Local 에 테이블 자동 생성
+      DYNAMODB_ENDPOINT: http://dynamodb:8000
+      PROVISIONER_API_TOKEN: local-token
+      PG_ENABLED: "true"
+      PG_ADMIN_URL: jdbc:postgresql://postgres:5432/postgres
+      PG_ADMIN_USERNAME: postgres
+      PG_ADMIN_PASSWORD: postgres
+      PG_PUBLIC_HOST: postgres            # 같은 docker 네트워크의 앱이 접속할 주소
+      MYSQL_ENABLED: "true"
+      MYSQL_ADMIN_URL: jdbc:mysql://mysql:3306/?allowPublicKeyRetrieval=true&useSSL=false
+      MYSQL_ADMIN_USERNAME: root
+      MYSQL_ADMIN_PASSWORD: root
+      MYSQL_PUBLIC_HOST: mysql
