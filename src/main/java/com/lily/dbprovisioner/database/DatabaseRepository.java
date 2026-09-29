@@ -124,13 +124,29 @@ public class DatabaseRepository {
                 .expressionAttributeValues(values));
     }
 
-    /** DB 아이템과 가드 아이템을 같이 지운다 */
+    /**
+     * DB 아이템과 가드 아이템을 같이 지운다.
+     * 가드가 이미 다른 DB 를 가리키면 (FAILED 재시도가 동시에 들어와 다른 요청이 먼저 새로 만든 경우)
+     * 그 가드는 남기고 DB 아이템만 지운다. 안 그러면 가드가 사라져 프로젝트에 DB 가 2개 생길 수 있다.
+     */
     public void delete(ManagedDatabase db) {
-        dynamo.transactWriteItems(r -> r.transactItems(
-                TransactWriteItem.builder().delete(d -> d.tableName(table)
-                        .key(key(DB_PREFIX + db.id()))).build(),
-                TransactWriteItem.builder().delete(d -> d.tableName(table)
-                        .key(key(PROJECT_PREFIX + db.projectId()))).build()));
+        try {
+            dynamo.transactWriteItems(r -> r.transactItems(
+                    TransactWriteItem.builder().delete(d -> d.tableName(table)
+                            .key(key(DB_PREFIX + db.id()))).build(),
+                    TransactWriteItem.builder().delete(d -> d.tableName(table)
+                            .key(key(PROJECT_PREFIX + db.projectId()))
+                            .conditionExpression("attribute_not_exists(pk) OR databaseId = :id")
+                            .expressionAttributeValues(Map.of(":id", s(db.id())))).build()));
+        } catch (TransactionCanceledException e) {
+            boolean guardTaken = e.cancellationReasons().stream()
+                    .map(CancellationReason::code)
+                    .anyMatch("ConditionalCheckFailed"::equals);
+            if (!guardTaken) {
+                throw e;
+            }
+            dynamo.deleteItem(r -> r.tableName(table).key(key(DB_PREFIX + db.id())));
+        }
     }
 
     private static Map<String, AttributeValue> toItem(ManagedDatabase db) {

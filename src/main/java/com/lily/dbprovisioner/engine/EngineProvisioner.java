@@ -4,7 +4,8 @@ import java.util.Map;
 
 /**
  * 공용 인스턴스 하나(엔진 하나)에 프로젝트 전용 DB + 계정을 만들고 지우는 역할.
- * create / drop 은 여러 번 호출해도 안전해야 한다 (실패 후 재시도, 롤백에서 재사용).
+ * drop 은 여러 번 호출해도 안전해야 한다 (실패 후 재시도, 롤백에서 재사용).
+ * create 는 매번 새 이름으로 한 번만 호출된다.
  */
 public interface EngineProvisioner {
 

@@ -2,6 +2,9 @@ package com.lily.dbprovisioner;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lily.dbprovisioner.database.DatabaseRepository;
+import com.lily.dbprovisioner.database.DatabaseStatus;
+import com.lily.dbprovisioner.database.ManagedDatabase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +20,10 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -60,6 +65,9 @@ class DatabaseApiTest {
     @Autowired
     ObjectMapper mapper;
 
+    @Autowired
+    DatabaseRepository repository;
+
     @BeforeEach
     void clean() {
         items().forEach(item -> dynamo.deleteItem(r -> r.tableName(TABLE).key(Map.of("pk", item.get("pk")))));
@@ -72,6 +80,25 @@ class DatabaseApiTest {
         mvc.perform(get("/api/databases"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void 인코딩된_경로로도_토큰_검사를_우회할_수_없다() throws Exception {
+        mvc.perform(get(URI.create("/%61pi/databases")))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void 다른_DB를_가리키는_가드는_지우지_않는다() throws Exception {
+        String currentId = create("blog", "postgres").get("id").asText();
+        ManagedDatabase stale = repository.findById(currentId).orElseThrow();
+        ManagedDatabase old = new ManagedDatabase(UUID.randomUUID().toString(), "blog", stale.engine(),
+                stale.dbName(), stale.dbUser(), stale.host(), stale.port(), null,
+                DatabaseStatus.FAILED, "old", stale.createdAt(), stale.updatedAt());
+
+        repository.delete(old);
+
+        assertThat(repository.findByProjectId("blog")).map(ManagedDatabase::id).contains(currentId);
     }
 
     @Test

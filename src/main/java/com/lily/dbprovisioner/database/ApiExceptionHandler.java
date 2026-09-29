@@ -66,8 +66,9 @@ public class ApiExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleUnexpected(Exception e) {
         // 플랫폼의 로그 수집/원인 분류 모듈이 잡아야 하는 지점
         log.error("unhandled error: {}", e.getMessage(), e);
+        // 원인 메시지는 로그에만 남긴다 (AWS/JDBC 내부 정보가 응답으로 나가지 않도록)
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(body("INTERNAL_ERROR", e.getMessage()));
+                .body(body("INTERNAL_ERROR", "internal error"));
     }
 
     private Map<String, Object> body(String code, String message) {
