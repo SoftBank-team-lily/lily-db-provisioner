@@ -59,9 +59,11 @@
 ### 공통
 - 모든 `/api/**` 요청에 `Authorization: Bearer {PROVISIONER_API_TOKEN}` 헤더 필요. `/actuator/**` 는 토큰 없이 접근
 - 에러 형식은 `lily-blog-sample` 과 같다: `{"timestamp", "code", "message"}`
-- `projectId` 는 `[A-Za-z0-9._-]`, 최대 100자
+- `projectId` 는 소문자·숫자·하이픈(`-`), 처음과 끝은 영숫자, 최대 40자. CI/CD 가 k3s namespace/Secret 이름에 그대로 쓰기 때문
 
 ### CI/CD
+→ 전체 규칙: [docs/cicd-integration.md](docs/cicd-integration.md)
+
 1. 프로젝트 등록 시 `POST /api/databases` 로 생성하고 응답의 `id` 를 프로젝트에 저장
 2. 배포 직전에 `GET /api/databases/{id}/env` 호출 → `env` 의 키/값을 그대로 컨테이너 환경변수로 주입 (K8s 로 가면 Secret)
 3. `status` 가 `AVAILABLE` 이 아니면 `/env` 는 409. `FAILED` 면 같은 projectId 로 다시 POST
@@ -78,7 +80,8 @@
 | `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | `DB_*` 와 같은 값 | 일반 Spring Boot 앱 (코드 수정 없이 자동으로 읽음) |
 | `DATABASE_URL` | `postgresql://user:pw@<host>:5432/p_1b62...` | Node, Python 등 |
 
-- 커넥션 풀 최대값은 20 이하로 (`DB_POOL_SIZE` 등). 넘으면 접속 거부
+- 계정당 동시 연결은 20 (`DB_CONNECTION_LIMIT`). 넘으면 접속 거부
+- 그래서 `/env` 에 커넥션 풀 크기 5 를 같이 내려준다 (`SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE`, `DB_POOL_SIZE`, 설정: `APP_DB_POOL_SIZE`). 레플리카 2 개로 블루-그린 전환 중 4 개 Pod 가 떠도 4 x 5 = 20
 - RDS PostgreSQL 은 SSL 을 강제할 수 있다. JDBC 기본값(`sslmode=prefer`)이면 그대로 동작
 
 ### 로깅 · 모니터링

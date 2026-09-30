@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -29,6 +30,7 @@ public class DatabaseService {
     private final EngineRegistry engines;
     private final SecretStore secrets;
     private final int connectionLimit;
+    private final String appPoolSize;
 
     public DatabaseService(DatabaseRepository repository, EngineRegistry engines,
                            SecretStore secrets, ProvisionerProperties props) {
@@ -36,6 +38,7 @@ public class DatabaseService {
         this.engines = engines;
         this.secrets = secrets;
         this.connectionLimit = props.connectionLimit();
+        this.appPoolSize = Integer.toString(props.appPoolSize());
     }
 
     public ManagedDatabase create(String projectId, Engine engine) {
@@ -91,7 +94,11 @@ public class DatabaseService {
             throw new DatabaseNotReadyException(id, db.status());
         }
         String password = secrets.get(db.secretRef());
-        return engines.get(db.engine()).env(db.dbName(), password);
+        Map<String, String> env = new LinkedHashMap<>(engines.get(db.engine()).env(db.dbName(), password));
+        // 계정당 연결 제한(connectionLimit)을 넘지 않도록 앱 커넥션 풀 크기를 같이 내려준다
+        env.put("SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE", appPoolSize);
+        env.put("DB_POOL_SIZE", appPoolSize);
+        return env;
     }
 
     /** drop 은 IF EXISTS 라 실패 후 다시 호출해도 된다 */

@@ -9,6 +9,7 @@ import java.util.Map;
 public record ProvisionerProperties(
         String apiToken,
         @DefaultValue("20") int connectionLimit,
+        @DefaultValue("5") int appPoolSize,
         @DefaultValue Dynamodb dynamodb,
         @DefaultValue Secrets secrets,
         Map<String, EngineSettings> engines) {

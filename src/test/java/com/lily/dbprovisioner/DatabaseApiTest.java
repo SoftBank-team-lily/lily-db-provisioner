@@ -130,7 +130,9 @@ class DatabaseApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.env.DB_URL").value("jdbc:postgresql://fake-host:5432/" + dbName))
                 .andExpect(jsonPath("$.env.DB_USERNAME").value(dbName))
-                .andExpect(jsonPath("$.env.DB_PASSWORD").isNotEmpty());
+                .andExpect(jsonPath("$.env.DB_PASSWORD").isNotEmpty())
+                .andExpect(jsonPath("$.env.SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE").value("5"))
+                .andExpect(jsonPath("$.env.DB_POOL_SIZE").value("5"));
 
         mvc.perform(auth(get("/api/databases").param("projectId", "blog")))
                 .andExpect(status().isOk())
@@ -180,6 +182,15 @@ class DatabaseApiTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("blog'; DROP TABLE x;--", "postgres")))
                 .andExpect(status().isBadRequest());
+
+        // k3s 이름 규칙: 소문자·숫자·하이픈, 처음과 끝은 영숫자, 최대 40자
+        for (String invalid : List.of("My-Blog", "my_blog", "my.blog", "-blog", "blog-", "a".repeat(41))) {
+            mvc.perform(auth(post("/api/databases"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body(invalid, "postgres")))
+                    .andExpect(status().isBadRequest());
+        }
+        create("my-blog-2", "postgres");
     }
 
     @Test
