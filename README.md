@@ -41,6 +41,9 @@ k3s(lily-server + worker 2) 에 세 모듈을 올리고 `lily-builder → lily-c
 ### 권한 구조
 AWS 권한은 lily-server 에만 있고, 사용자 코드(앱·빌드)는 AWS 자격증명이 없는 worker 에서만 돈다. 플랫폼 API 는 사용자 앱에서 호출할 수 없다. 노드·IAM·RBAC·네트워크·비밀값별 상세는 [docs/permissions.md](docs/permissions.md).
 
+### 온프레미스 · 클라우드 버스팅 DB 공유
+온프레미스 앱은 SSH 터널(lily-server 의 포워딩 전용 계정 `lily-tunnel`, [db-tunnel-user.sh](deploy/k3s/cluster/db-tunnel-user.sh))로 같은 RDS 에 붙는다. 접속 정보는 lily-builder `/api/burst/apps/{app}/database` 가 이 모듈의 `/env?host=&port=` 로 받는다. 같은 projectId 라 클라우드 배포와 같은 DB 다.
+
 ### 아직 안 된 것
 - **MySQL 실환경 검증**: 로컬 Docker(MySQL 8.4) 에서만 확인. RDS MySQL 은 `enable_mysql = true` 로 띄워서 검증 필요
 - **프로젝트 삭제 연동**: lily-cicd 에서 `DELETE /api/databases/{id}` 호출 없음
@@ -116,7 +119,7 @@ lily-cicd 의 `HttpDatabaseProvisioner` 가 배포할 때마다 아래를 수행
 | POST | `/api/databases` | 생성. body `{"projectId":"blog","engine":"postgres"}` → `201` |
 | GET | `/api/databases?projectId=blog` | 목록 (projectId 생략 시 전체) |
 | GET | `/api/databases/{id}` | 상태 조회 (비밀번호 없음) |
-| GET | `/api/databases/{id}/env` | 앱에 주입할 환경변수 (비밀번호 포함) |
+| GET | `/api/databases/{id}/env?host=&port=` | 앱에 주입할 환경변수 (비밀번호 포함). `host`/`port` 를 주면 접속 주소만 바꾼다 (온프레미스 터널) |
 | DELETE | `/api/databases/{id}` | 삭제 → `204` |
 
 `POST /api/databases` 응답

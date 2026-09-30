@@ -56,6 +56,11 @@ public class ApiExceptionHandler {
         return ResponseEntity.badRequest().body(body("BAD_REQUEST", detail));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(body("BAD_REQUEST", e.getMessage()));
+    }
+
     /** 잘못된 JSON, 지원하지 않는 engine 값 등 */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, Object>> handleUnreadable(HttpMessageNotReadableException e) {

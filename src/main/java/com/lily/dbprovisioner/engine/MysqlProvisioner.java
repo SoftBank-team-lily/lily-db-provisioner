@@ -37,8 +37,8 @@ class MysqlProvisioner extends JdbcEngineProvisioner {
     }
 
     @Override
-    public Map<String, String> env(String name, String password) {
-        String hostPort = publicHost() + ":" + publicPort();
+    public Map<String, String> env(String name, String password, String host, int port) {
+        String hostPort = host + ":" + port;
         Map<String, String> env = jdbcEnv("jdbc:mysql://" + hostPort + "/" + name, name, password);
         env.put("DATABASE_URL", "mysql://" + name + ":" + password + "@" + hostPort + "/" + name);
         return env;

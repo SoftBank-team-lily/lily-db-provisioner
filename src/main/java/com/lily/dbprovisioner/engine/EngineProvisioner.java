@@ -35,5 +35,13 @@ public interface EngineProvisioner {
      * DB_URL / DB_USERNAME / DB_PASSWORD 는 lily-blog-sample 의 연동 규칙과 같고,
      * DATABASE_URL 은 Spring 이 아닌 앱(Node, Python 등)을 위한 값이다.
      */
-    Map<String, String> env(String name, String password);
+    default Map<String, String> env(String name, String password) {
+        return env(name, password, publicHost(), publicPort());
+    }
+
+    /**
+     * 접속 주소만 바꾼 환경변수. 계정·비밀번호·DB 는 같다.
+     * 온프레미스처럼 RDS 에 터널로 붙는 곳은 터널 주소를 넣는다.
+     */
+    Map<String, String> env(String name, String password, String host, int port);
 }

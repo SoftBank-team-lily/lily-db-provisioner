@@ -50,9 +50,9 @@ class FakeProvisioner implements EngineProvisioner {
     }
 
     @Override
-    public Map<String, String> env(String name, String password) {
+    public Map<String, String> env(String name, String password, String host, int port) {
         Map<String, String> env = new LinkedHashMap<>();
-        env.put("DB_URL", "jdbc:postgresql://fake-host:5432/" + name);
+        env.put("DB_URL", "jdbc:postgresql://" + host + ":" + port + "/" + name);
         env.put("DB_USERNAME", name);
         env.put("DB_PASSWORD", password);
         return env;
