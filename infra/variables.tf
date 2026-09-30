@@ -63,7 +63,7 @@ variable "budget_limit_usd" {
 }
 
 variable "provisioner_role_name" {
-  description = "프로비저너 정책을 붙일 IAM 역할 이름 (lily-server EC2 의 인스턴스 역할). 비우면 붙이지 않음"
+  description = "lily-server EC2 의 인스턴스 역할 이름. 프로비저너·빌더 정책을 여기 붙인다. 비우면 붙이지 않음"
   type        = string
   default     = ""
 }
