@@ -131,8 +131,8 @@ class DatabaseApiTest {
                 .andExpect(jsonPath("$.env.DB_URL").value("jdbc:postgresql://fake-host:5432/" + dbName))
                 .andExpect(jsonPath("$.env.DB_USERNAME").value(dbName))
                 .andExpect(jsonPath("$.env.DB_PASSWORD").isNotEmpty())
-                .andExpect(jsonPath("$.env.SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE").value("5"))
-                .andExpect(jsonPath("$.env.DB_POOL_SIZE").value("5"));
+                .andExpect(jsonPath("$.env.SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE").value("3"))
+                .andExpect(jsonPath("$.env.DB_POOL_SIZE").value("3"));
 
         mvc.perform(auth(get("/api/databases").param("projectId", "blog")))
                 .andExpect(status().isOk())

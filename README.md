@@ -83,7 +83,7 @@ lily-cicd 의 `HttpDatabaseProvisioner` 가 배포할 때마다 아래를 수행
 | `DATABASE_URL` | `postgresql://user:pw@<host>:5432/p_1b62...` | Node, Python 등 |
 
 - 계정당 동시 연결은 20 (`DB_CONNECTION_LIMIT`). 넘으면 접속 거부
-- 그래서 `/env` 에 커넥션 풀 크기 5 를 같이 내려준다 (`SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE`, `DB_POOL_SIZE`, 설정: `APP_DB_POOL_SIZE`). 레플리카 2 개로 블루-그린 전환 중 4 개 Pod 가 떠도 4 x 5 = 20
+- 그래서 `/env` 에 커넥션 풀 크기 3 을 같이 내려준다 (`SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE`, `DB_POOL_SIZE`, 설정: `APP_DB_POOL_SIZE`). lily-cicd canary 전환 중 Pod 6개가 떠도 6 x 3 = 18
 - RDS PostgreSQL 은 SSL 을 강제할 수 있다. JDBC 기본값(`sslmode=prefer`)이면 그대로 동작
 
 ### 로깅 · 모니터링

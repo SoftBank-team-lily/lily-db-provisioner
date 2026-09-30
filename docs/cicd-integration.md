@@ -7,9 +7,12 @@ lily-cicd 가 앱을 배포할 때 DB 를 준비하고 접속 정보를 앱 환�
 lily-cicd 의 `DatabaseProvisioner` 인터페이스. 배포할 때마다 새 슬롯(blue/green)을 만들기 전에 호출되고,
 돌려준 맵이 컨테이너 환경변수로 들어간다. 구현체는 lily-cicd 레포의 `HttpDatabaseProvisioner`.
 
+배포 요청(`POST /api/deployments`)의 `database` 에 `postgres` 또는 `mysql` 을 넣은 앱만 DB 를 준비한다.
+생략하면 (프론트엔드 등) 프로비저너를 부르지 않고 DB 없이 배포한다.
+
 ```
-POST /api/deployments (lily-cicd)
-  → DatabaseProvisioner.prepare(context)
+POST /api/deployments (lily-cicd)   {"appName":"blog", ..., "database":"postgres"}
+  → DatabaseProvisioner.prepare(context)             database 가 없으면 여기서 끝 (빈 env)
       1. GET  /api/databases?projectId={appName}   있으면 그대로 사용
       2. POST /api/databases                       없거나 FAILED 면 생성
       3. GET  /api/databases/{id}/env              접속 정보
@@ -37,13 +40,12 @@ lily-cicd 의 `appName` 을 그대로 projectId 로 쓴다.
 
 ## lily-cicd 설정
 
-`application.yml` 또는 환경변수. `provisioner-url` 이 없으면 기존처럼 DB 를 만들지 않는다 (`NoopDatabaseProvisioner`).
+`application.yml` 또는 환경변수. `provisioner-url` 이 없으면 `database` 를 넣어도 DB 를 만들지 않는다 (`NoopDatabaseProvisioner`).
 
 | 설정 | 환경변수 | 예시 |
 |---|---|---|
 | `lily.database.provisioner-url` | `LILY_DATABASE_PROVISIONER_URL` | `http://db-provisioner.lily-system.svc` |
 | `lily.database.api-token` | `LILY_DATABASE_API_TOKEN` | 프로비저너의 `PROVISIONER_API_TOKEN` |
-| `lily.database.engine` | `LILY_DATABASE_ENGINE` | `postgres` (기본) / `mysql` |
 
 - `db-provisioner.lily-system.svc` 는 클러스터 안(Pod)에서만 풀리는 주소다. lily-cicd 를 노드 호스트에서 직접 실행하면 이 주소로는 접근할 수 없다
 
@@ -52,7 +54,7 @@ lily-cicd 의 `appName` 을 그대로 projectId 로 쓴다.
 | 변수 | 대상 |
 |---|---|
 | `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | 일반 Spring Boot 앱. 코드 수정 없이 인식 |
-| `SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE` | Spring 커넥션 풀 크기 (5) |
+| `SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE` | Spring 커넥션 풀 크기 (3) |
 | `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` / `DB_POOL_SIZE` | `lily-blog-sample` 규칙 |
 | `DATABASE_URL` | Node(Prisma 등), Python |
 
@@ -61,11 +63,16 @@ lily-cicd 의 `appName` 을 그대로 projectId 로 쓴다.
 
 ## 커넥션 수
 
-- DB 계정당 동시 연결 20개 제한
-- lily-cicd 는 슬롯당 레플리카 1개. 전환 중 blue, green 이 같이 떠도 2 x 풀 5 = 10
-- 레플리카를 늘리면 (레플리카 x 2 x 5) 가 20 을 넘지 않아야 한다. 넘으면 풀 크기(`APP_DB_POOL_SIZE`)나 연결 제한(`DB_CONNECTION_LIMIT`)을 같이 조정
+- DB 계정당 동시 연결 20개 제한. 앱 커넥션 풀은 기동할 때 연결을 미리 열기 때문에 (Hikari 기본값) Pod 수 x 풀 크기가 20 을 넘으면 넘친 Pod 는 DB 접속에 실패한다
+- 그래서 풀 크기를 3 으로 내려준다
+
+| 전략 | 전환 중 최대 Pod | 연결 수 |
+|---|---|---|
+| blue-green | 2 (blue 1 + green 1) | 2 x 3 = 6 |
+| canary | 6 (stable 5 + canary 1, stable 을 줄이기 전) | 6 x 3 = 18 |
+
+- lily-cicd 의 Pod 수(`TOTAL_REPLICAS`, 슬롯 레플리카)를 늘리면 풀 크기(`APP_DB_POOL_SIZE`)나 연결 제한(`DB_CONNECTION_LIMIT`)을 같이 조정해야 한다
 
 ## 아직 lily-cicd 쪽에 없는 것
 
-- DB 필요 여부: 배포 요청에 필드가 없어서, `provisioner-url` 을 켜면 모든 앱에 DB 가 만들어진다
 - 프로젝트 삭제 시 `DELETE /api/databases/{id}` 호출
