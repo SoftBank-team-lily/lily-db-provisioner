@@ -4,7 +4,6 @@ import com.lily.dbprovisioner.ProvisionerProperties.EngineSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -76,10 +75,7 @@ class PostgresProvisioner extends JdbcEngineProvisioner {
     @Override
     public Map<String, String> env(String name, String password) {
         String hostPort = publicHost() + ":" + publicPort();
-        Map<String, String> env = new LinkedHashMap<>();
-        env.put("DB_URL", "jdbc:postgresql://" + hostPort + "/" + name);
-        env.put("DB_USERNAME", name);
-        env.put("DB_PASSWORD", password);
+        Map<String, String> env = jdbcEnv("jdbc:postgresql://" + hostPort + "/" + name, name, password);
         env.put("DATABASE_URL", "postgresql://" + name + ":" + password + "@" + hostPort + "/" + name);
         return env;
     }

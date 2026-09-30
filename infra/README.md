@@ -10,9 +10,9 @@ Terraform / AWS CLI 는 Docker 로 실행하므로 로컬 설치가 필요 없�
 |---|---|---|
 | RDS PostgreSQL 16 | `db.t4g.micro`, 단일 AZ, gp3 20GB, 암호화 | 약 $0.025/h + 스토리지 |
 | RDS MySQL 8.4 | `enable_mysql = true` 일 때만 | 위와 같음 |
-| 보안그룹 | 5432/3306 을 `allowed_cidrs` 에만 허용 | 무료 |
+| 보안그룹 | 5432/3306 을 `allowed_cidrs`(테스트 PC) 와 `allowed_security_group_ids`(k3s 노드) 에만 허용 | 무료 |
 | DynamoDB `lily-managed-databases` | PAY_PER_REQUEST, pk(S) | 테스트 수준 ≈ $0 |
-| IAM 정책 `lily-db-provisioner` | 프로비저너 최소 권한 (아직 어디에도 연결 안 함) | 무료 |
+| IAM 정책 `lily-db-provisioner` | 프로비저너 최소 권한. `provisioner_role_name` 을 넣으면 그 역할(lily-server)에 연결 | 무료 |
 | Budgets | `budget_email` 을 넣으면 월 예산 알림 | 무료 |
 
 - 기본 VPC 를 쓴다. 플랫폼 VPC 가 생기면 서브넷/보안그룹만 바꾸면 된다
@@ -40,6 +40,9 @@ Terraform / AWS CLI 는 Docker 로 실행하므로 로컬 설치가 필요 없�
 cp terraform.tfvars.example terraform.tfvars
 curl https://checkip.amazonaws.com        # 이 IP 를 allowed_cidrs 에 "x.x.x.x/32" 로
 ```
+
+k3s 클러스터에서 접속하려면 server/worker EC2 의 보안그룹 ID 를 `allowed_security_group_ids` 에 넣는다.
+보안그룹 참조는 **같은 VPC** 안에서만 동작한다 (RDS 는 기본 VPC). EC2 가 다른 VPC 면 VPC 피어링이나 RDS 이전이 필요하다.
 
 ### 3. 생성 (약 5~10분, RDS 생성 대기)
 

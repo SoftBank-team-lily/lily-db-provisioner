@@ -2,7 +2,6 @@ package com.lily.dbprovisioner.engine;
 
 import com.lily.dbprovisioner.ProvisionerProperties.EngineSettings;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static com.lily.dbprovisioner.engine.Credentials.checkName;
@@ -40,10 +39,7 @@ class MysqlProvisioner extends JdbcEngineProvisioner {
     @Override
     public Map<String, String> env(String name, String password) {
         String hostPort = publicHost() + ":" + publicPort();
-        Map<String, String> env = new LinkedHashMap<>();
-        env.put("DB_URL", "jdbc:mysql://" + hostPort + "/" + name);
-        env.put("DB_USERNAME", name);
-        env.put("DB_PASSWORD", password);
+        Map<String, String> env = jdbcEnv("jdbc:mysql://" + hostPort + "/" + name, name, password);
         env.put("DATABASE_URL", "mysql://" + name + ":" + password + "@" + hostPort + "/" + name);
         return env;
     }

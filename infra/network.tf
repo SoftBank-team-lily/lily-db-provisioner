@@ -43,6 +43,29 @@ resource "aws_vpc_security_group_ingress_rule" "mysql" {
   cidr_ipv4         = each.value
 }
 
+# k3s 노드(프로비저너 Pod, 사용자 앱 Pod)에서 오는 접속. IP 대신 노드의 보안그룹으로 허용한다
+resource "aws_vpc_security_group_ingress_rule" "postgres_from_sg" {
+  for_each = var.enable_postgres ? toset(var.allowed_security_group_ids) : toset([])
+
+  security_group_id            = aws_security_group.shared_db.id
+  description                  = "postgres from k3s nodes"
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  referenced_security_group_id = each.value
+}
+
+resource "aws_vpc_security_group_ingress_rule" "mysql_from_sg" {
+  for_each = var.enable_mysql ? toset(var.allowed_security_group_ids) : toset([])
+
+  security_group_id            = aws_security_group.shared_db.id
+  description                  = "mysql from k3s nodes"
+  ip_protocol                  = "tcp"
+  from_port                    = 3306
+  to_port                      = 3306
+  referenced_security_group_id = each.value
+}
+
 resource "aws_vpc_security_group_egress_rule" "all" {
   security_group_id = aws_security_group.shared_db.id
   ip_protocol       = "-1"

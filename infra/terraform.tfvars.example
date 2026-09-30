@@ -3,9 +3,15 @@
 # 테스트 PC 공인 IP. 확인: curl https://checkip.amazonaws.com
 allowed_cidrs = ["x.x.x.x/32"]
 
+# k3s server/worker EC2 의 보안그룹 (EC2 콘솔 → 인스턴스 → 보안 탭). RDS 와 같은 VPC 여야 한다
+allowed_security_group_ids = []   # 예: ["sg-0123456789abcdef0"]
+
 enable_postgres = true
 enable_mysql    = false   # MySQL 까지 검증하려면 true (비용 2배)
 
 # 월 예산 알림 (비우면 생성 안 함)
 budget_email     = ""
 budget_limit_usd = 20
+
+# lily-server EC2 의 인스턴스 역할 이름 (EC2 콘솔 → 인스턴스 → 보안 탭 → IAM 역할). worker 역할은 넣지 않는다
+provisioner_role_name = ""

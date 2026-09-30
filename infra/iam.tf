@@ -1,5 +1,5 @@
 # 프로비저너 실행 역할에 붙일 최소 권한 정책.
-# 지금은 만들어만 두고, EC2/ECS 에 배포할 때 역할에 연결한다
+# provisioner_role_name 을 넣으면 그 역할에 연결한다 (맨 아래)
 data "aws_caller_identity" "current" {}
 
 data "aws_iam_policy_document" "provisioner" {
@@ -31,4 +31,12 @@ resource "aws_iam_policy" "provisioner" {
   name        = "${var.name}-db-provisioner"
   description = "db-provisioner: metadata table + tenant passwords in SSM"
   policy      = data.aws_iam_policy_document.provisioner.json
+}
+
+# lily-server EC2 의 인스턴스 역할에 위 정책을 붙인다 (프로비저너 Pod 가 이 역할로 AWS 에 접근).
+# worker 역할에는 붙이지 않는다: worker 에서 도는 사용자 앱 Pod 도 같은 권한을 얻게 된다
+resource "aws_iam_role_policy_attachment" "provisioner" {
+  count      = var.provisioner_role_name == "" ? 0 : 1
+  role       = var.provisioner_role_name
+  policy_arn = aws_iam_policy.provisioner.arn
 }

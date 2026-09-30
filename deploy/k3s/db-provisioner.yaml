@@ -1,0 +1,87 @@
+# db-provisioner 를 k3s 에 올리는 매니페스트. 적용 방법은 같은 폴더의 README.md
+#
+# - lily-server(control-plane) 노드에서만 실행한다. AWS 권한(IAM 역할)을 lily-server 에만 붙이기 위해서다.
+#   worker 에 붙이면 사용자 앱 Pod 도 같은 권한으로 SSM 의 모든 DB 비밀번호를 읽을 수 있다.
+# - 클러스터 내부 전용 (ClusterIP). CI/CD 는 http://db-provisioner.lily-system.svc 로 호출한다.
+# - 설정값은 Secret db-provisioner-env (infra/.env.aws 로 생성) 에서 읽는다.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lily-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-provisioner
+  namespace: lily-system
+  labels:
+    app: db-provisioner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-provisioner
+  template:
+    metadata:
+      labels:
+        app: db-provisioner
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      tolerations:
+        # server 노드에 taint 를 걸어둔 경우에도 올라가도록
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: db-provisioner
+          # ECR 에 올린 이미지로 바꾼다
+          image: <ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/lily-db-provisioner:latest
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: db-provisioner-env
+          resources:
+            requests:
+              cpu: 100m
+              memory: 384Mi
+            limits:
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-provisioner
+  namespace: lily-system
+spec:
+  type: ClusterIP
+  selector:
+    app: db-provisioner
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

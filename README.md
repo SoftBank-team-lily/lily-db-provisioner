@@ -75,6 +75,7 @@
 |---|---|---|
 | `DB_URL` | `jdbc:postgresql://<host>:5432/p_1b62...` | Spring 등 JDBC (`lily-blog-sample` 규칙) |
 | `DB_USERNAME` / `DB_PASSWORD` | `p_1b62...` / (랜덤 24자) | |
+| `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | `DB_*` 와 같은 값 | 일반 Spring Boot 앱 (코드 수정 없이 자동으로 읽음) |
 | `DATABASE_URL` | `postgresql://user:pw@<host>:5432/p_1b62...` | Node, Python 등 |
 
 - 커넥션 풀 최대값은 20 이하로 (`DB_POOL_SIZE` 등). 넘으면 접속 거부
@@ -128,6 +129,9 @@
     "DB_URL": "jdbc:postgresql://lily-shared-postgres.xxxx.rds.amazonaws.com:5432/p_1b626675e4a14703",
     "DB_USERNAME": "p_1b626675e4a14703",
     "DB_PASSWORD": "********",
+    "SPRING_DATASOURCE_URL": "jdbc:postgresql://lily-shared-postgres.xxxx.rds.amazonaws.com:5432/p_1b626675e4a14703",
+    "SPRING_DATASOURCE_USERNAME": "p_1b626675e4a14703",
+    "SPRING_DATASOURCE_PASSWORD": "********",
     "DATABASE_URL": "postgresql://p_1b626675e4a14703:********@lily-shared-postgres.xxxx.rds.amazonaws.com:5432/p_1b626675e4a14703"
   }
 }

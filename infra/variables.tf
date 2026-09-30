@@ -13,6 +13,13 @@ variable "name" {
 variable "allowed_cidrs" {
   description = "RDS 5432/3306 에 접속을 허용할 CIDR (테스트 PC 의 공인 IP/32)"
   type        = list(string)
+  default     = []
+}
+
+variable "allowed_security_group_ids" {
+  description = "RDS 5432/3306 에 접속을 허용할 보안그룹 ID (k3s server/worker EC2 의 보안그룹). RDS 와 같은 VPC 여야 한다"
+  type        = list(string)
+  default     = []
 }
 
 variable "publicly_accessible" {
@@ -53,4 +60,10 @@ variable "budget_limit_usd" {
   description = "월 예산 (USD)"
   type        = number
   default     = 20
+}
+
+variable "provisioner_role_name" {
+  description = "프로비저너 정책을 붙일 IAM 역할 이름 (lily-server EC2 의 인스턴스 역할). 비우면 붙이지 않음"
+  type        = string
+  default     = ""
 }

@@ -8,7 +8,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 관리자 계정으로 공용 인스턴스에 붙는 JDBC 기반 공통 부분.
@@ -54,6 +56,21 @@ abstract class JdbcEngineProvisioner implements EngineProvisioner, DisposableBea
         } catch (DataAccessException e) {
             throw new ProvisioningException(engine().code() + ": " + e.getMostSpecificCause().getMessage(), null);
         }
+    }
+
+    /**
+     * JDBC 접속용 공통 환경변수.
+     * DB_* 는 lily-blog-sample 규칙, SPRING_DATASOURCE_* 는 일반 Spring Boot 앱이 코드 수정 없이 읽는 이름이다.
+     */
+    protected Map<String, String> jdbcEnv(String jdbcUrl, String name, String password) {
+        Map<String, String> env = new LinkedHashMap<>();
+        env.put("DB_URL", jdbcUrl);
+        env.put("DB_USERNAME", name);
+        env.put("DB_PASSWORD", password);
+        env.put("SPRING_DATASOURCE_URL", jdbcUrl);
+        env.put("SPRING_DATASOURCE_USERNAME", name);
+        env.put("SPRING_DATASOURCE_PASSWORD", password);
+        return env;
     }
 
     @Override
