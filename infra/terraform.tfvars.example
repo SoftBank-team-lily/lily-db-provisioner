@@ -1,7 +1,13 @@
 # cp terraform.tfvars.example terraform.tfvars 후 수정 (terraform.tfvars 는 커밋하지 않음)
 
-# 테스트 PC 공인 IP. 확인: curl https://checkip.amazonaws.com
-allowed_cidrs = ["x.x.x.x/32"]
+# RDS 퍼블릭 접속. 운영은 false (클러스터는 아래 보안그룹으로 접속)
+publicly_accessible = false
+
+# 로컬 PC 에서 smoke-test 할 때만: publicly_accessible = true 와 함께 내 공인 IP (curl https://checkip.amazonaws.com)
+allowed_cidrs = []
+
+# lily-server 전용 역할 생성 (프로비저너·빌더 정책). 인스턴스 연결은 deploy/k3s/cluster/README.md
+create_server_role = true
 
 # k3s server/worker EC2 의 보안그룹 (EC2 콘솔 → 인스턴스 → 보안 탭). RDS 와 같은 VPC 여야 한다
 allowed_security_group_ids = []   # 예: ["sg-0123456789abcdef0"]
@@ -13,5 +19,5 @@ enable_mysql    = false   # MySQL 까지 검증하려면 true (비용 2배)
 budget_email     = ""
 budget_limit_usd = 20
 
-# lily-server EC2 의 인스턴스 역할 이름 (EC2 콘솔 → 인스턴스 → 보안 탭 → IAM 역할). worker 역할은 넣지 않는다
+# 기존 역할에 정책을 붙이려면 이름을 넣는다. create_server_role 을 쓰면 비워둔다
 provisioner_role_name = ""

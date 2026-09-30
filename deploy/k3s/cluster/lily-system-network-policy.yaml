@@ -1,0 +1,18 @@
+# lily-system(플랫폼 모듈) 으로 들어오는 트래픽 제한 (클러스터 공용, 1회 적용)
+#
+# lily-cicd, lily-builder API 는 인증이 없다. 막지 않으면 사용자 앱 Pod 가 클러스터 안에서
+# http://lily-cicd.lily-system.svc 를 직접 호출해 아무 이미지나 아무 namespace 에 배포할 수 있다.
+# 허용: 같은 namespace(모듈끼리 호출), 노드 IP(kubelet 헬스체크, kubectl port-forward)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-only
+  namespace: lily-system
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector: {}
+        - ipBlock:
+            cidr: 172.31.0.0/16   # 노드 (기본 VPC)

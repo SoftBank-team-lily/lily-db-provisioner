@@ -17,7 +17,7 @@ Terraform / AWS CLI 는 Docker 로 실행하므로 로컬 설치가 필요 없�
 | Budgets | `budget_email` 을 넣으면 월 예산 알림 | 무료 |
 
 - 기본 VPC 를 쓴다. 플랫폼 VPC 가 생기면 서브넷/보안그룹만 바꾸면 된다
-- 테스트 편의를 위해 `publicly_accessible = true` + 내 IP 만 허용. 검증이 끝나면 `false` 로 돌리거나 destroy
+- 운영 설정은 `publicly_accessible = false`, 클러스터는 `allowed_security_group_ids` 로 접속 (현재 적용 상태)
 - 관리자 비밀번호는 Terraform state 와 `.env.aws` 에만 있다. 둘 다 gitignore — **절대 커밋하지 않는다**
 
 ## 실행 순서
@@ -56,6 +56,8 @@ k3s 클러스터에서 접속하려면 server/worker EC2 의 보안그룹 ID 를
 끝나면 `.env.aws` 가 생긴다 (프로비저너 접속 설정, 관리자 비밀번호 포함).
 
 ### 4. 검증
+
+> RDS 는 현재 프라이빗(`publicly_accessible = false`)이라 로컬 PC 에서 `smoke-test.sh` 를 돌리려면 잠시 `publicly_accessible = true` 와 `allowed_cidrs = ["<내 IP>/32"]` 로 apply 해야 한다. 끝나면 되돌린다.
 
 ```bash
 ./smoke-test.sh

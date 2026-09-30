@@ -38,8 +38,10 @@ k3s(lily-server + worker 2) 에 세 모듈을 올리고 `lily-builder → lily-c
 - 처음 보는 appName(`blog2`)도 ECR 저장소 자동 생성부터 접속까지 한 번에 성공
 - 클러스터 공용 설정(ECR 인증, ingress-nginx, lily-server 역할)은 [deploy/k3s/cluster/README.md](deploy/k3s/cluster/README.md)
 
+### 권한 구조
+AWS 권한은 lily-server 에만 있고, 사용자 코드(앱·빌드)는 AWS 자격증명이 없는 worker 에서만 돈다. 플랫폼 API 는 사용자 앱에서 호출할 수 없다. 노드·IAM·RBAC·네트워크·비밀값별 상세는 [docs/permissions.md](docs/permissions.md).
+
 ### 아직 안 된 것
-- **RDS 프라이빗 전환**: 로컬 검증용으로 퍼블릭 접속 + 테스트 PC IP 도 열려 있다. 클러스터는 보안그룹으로 접속하므로 `publicly_accessible = false`, `allowed_cidrs = []` 로 바꿔도 된다
 - **MySQL 실환경 검증**: 로컬 Docker(MySQL 8.4) 에서만 확인. RDS MySQL 은 `enable_mysql = true` 로 띄워서 검증 필요
 - **프로젝트 삭제 연동**: lily-cicd 에서 `DELETE /api/databases/{id}` 호출 없음
 
