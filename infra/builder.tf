@@ -21,6 +21,13 @@ data "aws_iam_policy_document" "builder" {
     ]
     resources = [aws_dynamodb_table.builds.arn]
   }
+
+  # 앱별 ECR 저장소를 빌드 전에 만든다 (없으면 Kaniko push 가 NAME_UNKNOWN 으로 실패)
+  statement {
+    sid       = "CreateAppRepositories"
+    actions   = ["ecr:CreateRepository"]
+    resources = ["arn:aws:ecr:${var.region}:${data.aws_caller_identity.current.account_id}:repository/*"]
+  }
 }
 
 resource "aws_iam_policy" "builder" {

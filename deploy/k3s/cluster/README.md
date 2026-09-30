@@ -15,4 +15,4 @@
 - ECR 토큰 갱신은 **이미 있는 ServiceAccount** 에만 붙는다. namespace 나 ServiceAccount 를 새로 만들면 Job 을 한 번 다시 돌린다
 - 사용자 앱을 `default` 가 아닌 namespace 에 배포하려면 `ecr-credentials.yaml` 의 `NAMESPACES` 에 추가한다
 - worker 역할(`lily-ec2-role`)에는 `AmazonDynamoDBFullAccess` 가 붙어 있고 IMDS hop limit 이 2 라서, worker 에서 도는 사용자 앱 Pod 가 플랫폼 DynamoDB 테이블에 접근할 수 있다. worker 역할에서 DynamoDB 권한을 빼거나 hop limit 을 1 로 낮추는 것을 권장 (Kaniko 의 ECR push 는 worker 역할의 ECR 권한만 필요)
-- lily-builder 는 ECR 저장소를 만들지 않는다. 새 appName 으로 배포하기 전에 `aws ecr create-repository --repository-name {appName}` 이 필요하다 (builder 에서 자동 생성하도록 고칠 것)
+- 앱별 ECR 저장소는 lily-builder 가 빌드 전에 만든다 (`lily-builder` 정책의 `ecr:CreateRepository`)

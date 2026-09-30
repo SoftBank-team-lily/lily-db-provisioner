@@ -35,6 +35,7 @@ k3s(lily-server + worker 2) 에 세 모듈을 올리고 `lily-builder → lily-c
 - lily-builder 에 `lily-blog-sample` + `database=postgres` 요청 → Kaniko 빌드 → ECR push → lily-cicd 배포
 - lily-cicd 가 프로비저너로 DB 생성·env 주입 → 앱이 RDS 테넌트 DB 에 붙어 Flyway 적용 → `http://blog.43.200.152.53.nip.io` 접속, 글 작성이 RDS 에 저장
 - 재배포(blue → green) 시 같은 DB 재사용, 데이터 유지
+- 처음 보는 appName(`blog2`)도 ECR 저장소 자동 생성부터 접속까지 한 번에 성공
 - 클러스터 공용 설정(ECR 인증, ingress-nginx, lily-server 역할)은 [deploy/k3s/cluster/README.md](deploy/k3s/cluster/README.md)
 
 ### 아직 안 된 것
