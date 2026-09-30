@@ -67,3 +67,9 @@ variable "provisioner_role_name" {
   type        = string
   default     = ""
 }
+
+variable "create_server_role" {
+  description = "lily-server 전용 인스턴스 역할(lily-server-role)을 만들고 프로비저너·빌더 정책을 붙인다. 인스턴스 연결은 README 참고"
+  type        = bool
+  default     = false
+}

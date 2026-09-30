@@ -30,11 +30,17 @@
 - Terraform: 공용 RDS, DynamoDB 테이블, 프로비저너용 IAM 정책, 예산 알림 (`infra/`)
 - 실제 AWS 검증 스크립트 (`infra/smoke-test.sh`)
 
+### 실환경 통합 검증 (2026-09-30)
+k3s(lily-server + worker 2) 에 세 모듈을 올리고 `lily-builder → lily-cicd → db-provisioner → RDS` 흐름을 확인했다.
+- lily-builder 에 `lily-blog-sample` + `database=postgres` 요청 → Kaniko 빌드 → ECR push → lily-cicd 배포
+- lily-cicd 가 프로비저너로 DB 생성·env 주입 → 앱이 RDS 테넌트 DB 에 붙어 Flyway 적용 → `http://blog.43.200.152.53.nip.io` 접속, 글 작성이 RDS 에 저장
+- 재배포(blue → green) 시 같은 DB 재사용, 데이터 유지
+- 클러스터 공용 설정(ECR 인증, ingress-nginx, lily-server 역할)은 [deploy/k3s/cluster/README.md](deploy/k3s/cluster/README.md)
+
 ### 아직 안 된 것
-- **CI/CD 연동**: 파이프라인에서 `/env` 를 호출해 컨테이너에 주입하는 단계 (CI/CD 모듈에서 구현)
-- **프로비저너 배포**: 지금은 로컬 PC 에서 실행해 RDS 에 붙이는 방식으로만 검증. EC2/ECS 배포와 인스턴스 역할 연결은 플랫폼 인프라가 정해지면 진행
-- **네트워크 전환**: RDS 는 검증용으로 퍼블릭 접속 + 테스트 PC IP 만 허용 상태. 플랫폼 VPC 가 생기면 프라이빗으로 전환
+- **RDS 프라이빗 전환**: 로컬 검증용으로 퍼블릭 접속 + 테스트 PC IP 도 열려 있다. 클러스터는 보안그룹으로 접속하므로 `publicly_accessible = false`, `allowed_cidrs = []` 로 바꿔도 된다
 - **MySQL 실환경 검증**: 로컬 Docker(MySQL 8.4) 에서만 확인. RDS MySQL 은 `enable_mysql = true` 로 띄워서 검증 필요
+- **프로젝트 삭제 연동**: lily-cicd 에서 `DELETE /api/databases/{id}` 호출 없음
 
 ---
 
