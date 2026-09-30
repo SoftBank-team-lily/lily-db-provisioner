@@ -59,15 +59,17 @@
 ### 공통
 - 모든 `/api/**` 요청에 `Authorization: Bearer {PROVISIONER_API_TOKEN}` 헤더 필요. `/actuator/**` 는 토큰 없이 접근
 - 에러 형식은 `lily-blog-sample` 과 같다: `{"timestamp", "code", "message"}`
-- `projectId` 는 소문자·숫자·하이픈(`-`), 처음과 끝은 영숫자, 최대 40자. CI/CD 가 k3s namespace/Secret 이름에 그대로 쓰기 때문
+- `projectId` 는 lily-cicd 의 `appName` 과 같은 값. 소문자·숫자·하이픈(`-`), 처음과 끝은 영숫자, 최대 55자
 
 ### CI/CD
 → 전체 규칙: [docs/cicd-integration.md](docs/cicd-integration.md)
 
-1. 프로젝트 등록 시 `POST /api/databases` 로 생성하고 응답의 `id` 를 프로젝트에 저장
-2. 배포 직전에 `GET /api/databases/{id}/env` 호출 → `env` 의 키/값을 그대로 컨테이너 환경변수로 주입 (K8s 로 가면 Secret)
-3. `status` 가 `AVAILABLE` 이 아니면 `/env` 는 409. `FAILED` 면 같은 projectId 로 다시 POST
-4. 프로젝트 삭제 시 `DELETE /api/databases/{id}`
+lily-cicd 의 `HttpDatabaseProvisioner` 가 배포할 때마다 아래를 수행한다 (projectId = appName).
+
+1. `GET /api/databases?projectId={appName}` 로 기존 DB 조회
+2. 없거나 `FAILED` 면 `POST /api/databases` 로 생성
+3. `GET /api/databases/{id}/env` → `env` 를 그대로 새 슬롯 컨테이너 환경변수로 주입
+4. (프로젝트 삭제 기능이 생기면) `DELETE /api/databases/{id}`
 
 - 스키마 마이그레이션은 **앱이 기동하면서** 한다 (Flyway, Prisma 등). 파이프라인에서 따로 돌릴 필요 없음
 - `/env` 응답에는 비밀번호가 있으므로 파이프라인 로그에 출력하지 않는다

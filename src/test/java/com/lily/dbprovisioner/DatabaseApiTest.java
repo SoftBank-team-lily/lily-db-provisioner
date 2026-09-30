@@ -183,8 +183,8 @@ class DatabaseApiTest {
                         .content(body("blog'; DROP TABLE x;--", "postgres")))
                 .andExpect(status().isBadRequest());
 
-        // k3s 이름 규칙: 소문자·숫자·하이픈, 처음과 끝은 영숫자, 최대 40자
-        for (String invalid : List.of("My-Blog", "my_blog", "my.blog", "-blog", "blog-", "a".repeat(41))) {
+        // lily-cicd appName 규칙: 소문자·숫자·하이픈, 처음과 끝은 영숫자, 최대 55자
+        for (String invalid : List.of("My-Blog", "my_blog", "my.blog", "-blog", "blog-", "a".repeat(56))) {
             mvc.perform(auth(post("/api/databases"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(body(invalid, "postgres")))

@@ -12,11 +12,11 @@ import java.util.Map;
 public class DatabaseDto {
 
     /**
-     * projectId 는 CI/CD 가 k3s namespace/Secret 이름에도 그대로 쓰므로 k3s 이름 규칙(DNS label)에 맞춘다.
-     * 소문자·숫자·하이픈, 처음과 끝은 영숫자, 최대 40자 (접두어를 붙여도 63자 안에 들어가도록)
+     * projectId 는 lily-cicd 의 appName 을 그대로 쓴다. 그래서 appName 과 같은 규칙:
+     * 소문자·숫자·하이픈, 처음과 끝은 영숫자, 최대 55자
      */
     public record CreateRequest(
-            @NotBlank @Size(max = 40) @Pattern(regexp = "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$") String projectId,
+            @NotBlank @Size(max = 55) @Pattern(regexp = "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$") String projectId,
             @NotNull Engine engine) {}
 
     /** 비밀번호는 포함하지 않는다. 접속 정보는 /env 로만 받는다 */
