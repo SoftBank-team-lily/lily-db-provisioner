@@ -73,8 +73,8 @@ class PostgresProvisioner extends JdbcEngineProvisioner {
     }
 
     @Override
-    public Map<String, String> env(String name, String password) {
-        String hostPort = publicHost() + ":" + publicPort();
+    public Map<String, String> env(String name, String password, String host, int port) {
+        String hostPort = host + ":" + port;
         Map<String, String> env = jdbcEnv("jdbc:postgresql://" + hostPort + "/" + name, name, password);
         env.put("DATABASE_URL", "postgresql://" + name + ":" + password + "@" + hostPort + "/" + name);
         return env;

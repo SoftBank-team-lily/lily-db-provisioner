@@ -47,8 +47,10 @@ public class DatabaseController {
 
     /** CI/CD 가 배포 직전에 호출해서 앱 컨테이너에 그대로 주입한다 */
     @GetMapping("/databases/{id}/env")
-    public DatabaseDto.EnvResponse env(@PathVariable String id) {
-        return new DatabaseDto.EnvResponse(id, service.env(id));
+    public DatabaseDto.EnvResponse env(@PathVariable String id,
+                                       @RequestParam(required = false) String host,
+                                       @RequestParam(required = false) Integer port) {
+        return new DatabaseDto.EnvResponse(id, service.env(id, host, port));
     }
 
     @DeleteMapping("/databases/{id}")

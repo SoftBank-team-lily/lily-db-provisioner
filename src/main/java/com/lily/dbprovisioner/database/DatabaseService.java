@@ -25,6 +25,9 @@ import java.util.UUID;
 public class DatabaseService {
 
     private static final Logger log = LoggerFactory.getLogger(DatabaseService.class);
+    /** 호스트 이름 또는 IPv4 */
+    private static final java.util.regex.Pattern HOST =
+            java.util.regex.Pattern.compile("^[A-Za-z0-9]([A-Za-z0-9-]{0,62})(\\.[A-Za-z0-9]([A-Za-z0-9-]{0,62}))*$");
 
     private final DatabaseRepository repository;
     private final EngineRegistry engines;
@@ -89,12 +92,26 @@ public class DatabaseService {
 
     /** 사용자 앱에 주입할 환경변수 (비밀번호 포함) */
     public Map<String, String> env(String id) {
+        return env(id, null, null);
+    }
+
+    /** host/port 가 있으면 그 주소로 (온프레미스 터널 등). 없으면 엔진의 공개 주소 */
+    public Map<String, String> env(String id, String host, Integer port) {
+        if ((host == null) != (port == null)) {
+            throw new IllegalArgumentException("host 와 port 는 함께 지정한다");
+        }
+        if (host != null && (!HOST.matcher(host).matches() || port < 1 || port > 65535)) {
+            throw new IllegalArgumentException("host 또는 port 가 올바르지 않다");
+        }
         ManagedDatabase db = get(id);
         if (db.status() != DatabaseStatus.AVAILABLE) {
             throw new DatabaseNotReadyException(id, db.status());
         }
         String password = secrets.get(db.secretRef());
-        Map<String, String> env = new LinkedHashMap<>(engines.get(db.engine()).env(db.dbName(), password));
+        EngineProvisioner engine = engines.get(db.engine());
+        Map<String, String> env = new LinkedHashMap<>(host == null
+                ? engine.env(db.dbName(), password)
+                : engine.env(db.dbName(), password, host, port));
         // 계정당 연결 제한(connectionLimit)을 넘지 않도록 앱 커넥션 풀 크기를 같이 내려준다
         env.put("SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE", appPoolSize);
         env.put("DB_POOL_SIZE", appPoolSize);
