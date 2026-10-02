@@ -27,7 +27,7 @@
 - 메타데이터 DynamoDB 저장, 프로젝트당 DB 1개 보장 (동시 요청 포함)
 - 비밀번호 SSM 저장 (로컬은 메모리)
 - 내부 API 토큰 인증, 헬스체크 (`dynamodb`, `engines`)
-- Terraform: 공용 RDS, DynamoDB 테이블, 프로비저너용 IAM 정책, 예산 알림 (`infra/`)
+- Terraform: 공용 RDS, DynamoDB 테이블(`lily-managed-databases`, `lily-builds`), IAM 정책(프로비저너, lily-builder), lily-server 인스턴스 역할, 예산 알림 (`infra/`)
 - 실제 AWS 검증 스크립트 (`infra/smoke-test.sh`)
 
 ### 실환경 통합 검증 (2026-09-30)
@@ -44,9 +44,16 @@ AWS 권한은 lily-server 에만 있고, 사용자 코드(앱·빌드)는 AWS �
 ### 온프레미스 · 클라우드 버스팅 DB 공유
 온프레미스 앱은 SSH 터널(lily-server 의 포워딩 전용 계정 `lily-tunnel`, [db-tunnel-user.sh](deploy/k3s/cluster/db-tunnel-user.sh))로 같은 RDS 에 붙는다. 접속 정보는 lily-builder `/api/burst/apps/{app}/database` 가 이 모듈의 `/env?host=&port=` 로 받는다. 같은 projectId 라 클라우드 배포와 같은 DB 다.
 
+반대 방향(사용자 PC 의 DB, 사용자가 준 DB 를 클라우드 대기 Pod 에 여는 것)은 에이전트가 `ssh -R {lily-server 사설 IP}:{포트}:{DB}` 로 연다. 이 경우 lily-cicd 는 이 모듈을 부르지 않고 lily-builder 가 만든 `databaseEnv` 를 쓴다. lily-server 설정은 [lily-tunnel-reverse.sh](deploy/k3s/cluster/lily-tunnel-reverse.sh) (`sudo ./lily-tunnel-reverse.sh <RDS> <사설 IP> [20000] [20999]`, 여러 번 실행해도 된다).
+- authorized_keys 의 `cert-authority` 줄을 `TrustedUserCAKeys` 로 옮기고, `AuthorizedPrincipalsCommand` 가 인증서 key ID 로 권한을 정한다
+  - `agent-{key}`: RDS:5432 로의 `-L` 만
+  - `agent-{key}-p{port}`: 위에 더해 `{사설 IP}:{port}` 하나에만 `-R` (`permitlisten`). 다른 에이전트의 포트를 열면 그 대기 Pod 의 DB 접속을 받게 되므로 포트는 에이전트마다 하나다
+- `GatewayPorts clientspecified` 는 `lily-tunnel` 에만 켠다. 일반 키 줄에는 `-R` 을 막는 `permitlisten` 을 붙인다
+- 실행 전 authorized_keys 에 `cert-authority` 줄이 있어야 한다 (없으면 중단). 포트 범위 보안그룹(VPC 내부만)은 따로 연다
+- `db-tunnel-user.sh` 를 다시 실행하면 authorized_keys 를 덮어쓰므로 `lily-tunnel-reverse.sh` 도 다시 실행한다
+
 ### 아직 안 된 것
 - **MySQL 실환경 검증**: 로컬 Docker(MySQL 8.4) 에서만 확인. RDS MySQL 은 `enable_mysql = true` 로 띄워서 검증 필요
-- **프로젝트 삭제 연동**: lily-cicd 에서 `DELETE /api/databases/{id}` 호출 없음
 
 ---
 
@@ -105,8 +112,8 @@ lily-cicd 의 `HttpDatabaseProvisioner` 가 배포할 때마다 아래를 수행
 - 주요 로그: `database created`, `database deleted`, `database create failed`, `database delete failed`
 
 ### 인프라
-- `infra/` 의 Terraform 이 공용 RDS, DynamoDB 테이블, IAM 정책을 만든다 → [infra/README.md](infra/README.md)
-- 프로비저너 실행 역할에 `lily-db-provisioner` 정책 연결 필요 (DynamoDB 테이블 + SSM `/lily/db/*`)
+- `infra/` 의 Terraform 이 공용 RDS, DynamoDB 테이블 2개, IAM 정책 2개, lily-server 역할을 만든다 → [infra/README.md](infra/README.md)
+- lily-server 역할(`server-role.tf`)에 `{name}-db-provisioner` 정책(DynamoDB 테이블 + SSM `/lily/db/*`)이 붙는다. 다른 역할에 붙이려면 `provisioner_role_name`
 - 보안그룹: 앱 서버와 프로비저너 → RDS 5432/3306
 
 ---
@@ -149,7 +156,9 @@ lily-cicd 의 `HttpDatabaseProvisioner` 가 배포할 때마다 아래를 수행
     "SPRING_DATASOURCE_URL": "jdbc:postgresql://lily-shared-postgres.xxxx.rds.amazonaws.com:5432/p_1b626675e4a14703",
     "SPRING_DATASOURCE_USERNAME": "p_1b626675e4a14703",
     "SPRING_DATASOURCE_PASSWORD": "********",
-    "DATABASE_URL": "postgresql://p_1b626675e4a14703:********@lily-shared-postgres.xxxx.rds.amazonaws.com:5432/p_1b626675e4a14703"
+    "DATABASE_URL": "postgresql://p_1b626675e4a14703:********@lily-shared-postgres.xxxx.rds.amazonaws.com:5432/p_1b626675e4a14703",
+    "SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE": "3",
+    "DB_POOL_SIZE": "3"
   }
 }
 ```
@@ -164,13 +173,14 @@ lily-cicd 의 `HttpDatabaseProvisioner` 가 배포할 때마다 아래를 수행
 ### 에러
 | HTTP | code | 상황 |
 |---|---|---|
-| 400 | `BAD_REQUEST` | 요청 형식 오류, 지원하지 않는 engine |
+| 400 | `BAD_REQUEST` | 요청 형식 오류, 지원하지 않는 engine, `/env` 의 `host`/`port` 중 하나만 있거나 형식 오류 |
 | 400 | `ENGINE_NOT_ENABLED` | 이 프로비저너에서 꺼진 엔진 |
 | 401 | `UNAUTHORIZED` | 토큰 없음 / 틀림 |
 | 404 | `NOT_FOUND` | 없는 id |
 | 409 | `ALREADY_EXISTS` | 프로젝트에 이미 DB 가 있음 |
 | 409 | `NOT_READY` | `AVAILABLE` 이 아닌데 `/env` 요청 |
 | 502 | `PROVISIONING_FAILED` | RDS 쪽 실패 |
+| 500 | `INTERNAL_ERROR` | 예상하지 못한 오류. 원인은 로그에만 남김 |
 
 ---
 
@@ -211,7 +221,7 @@ lily-cicd 의 `HttpDatabaseProvisioner` 가 배포할 때마다 아래를 수행
 | 이름 | 기본값 | 설명 |
 |---|---|---|
 | `SPRING_PROFILES_ACTIVE` | `local` (이미지는 `prod`) | `local`: DynamoDB Local + 테이블 자동 생성, 사람이 읽는 로그 / `prod`: AWS, JSON 로그 |
-| `PROVISIONER_API_TOKEN` | (없음) | 운영 필수. 비어 있으면 인증 꺼짐 |
+| `PROVISIONER_API_TOKEN` | (없음) | 운영 필수. 비어 있으면 인증 꺼짐 (`prod` 는 기동 실패) |
 | `AWS_REGION` | `ap-northeast-2` | 자격증명은 AWS 기본 체인 (운영은 인스턴스 역할) |
 | `DYNAMODB_TABLE` | `lily-managed-databases` | |
 | `DYNAMODB_ENDPOINT` | (없음, `local` 은 `http://localhost:8000`) | 비우면 AWS |
@@ -219,6 +229,7 @@ lily-cicd 의 `HttpDatabaseProvisioner` 가 배포할 때마다 아래를 수행
 | `SECRET_STORE` | `memory` | `memory` / `ssm` |
 | `SSM_PREFIX` | `/lily/db` | |
 | `DB_CONNECTION_LIMIT` | `20` | 테넌트 계정당 최대 커넥션 |
+| `APP_DB_POOL_SIZE` | `3` | `/env` 로 내려주는 앱 커넥션 풀 크기 |
 | `PG_ENABLED` | `false` | |
 | `PG_ADMIN_URL` | `jdbc:postgresql://localhost:5432/postgres` | RDS 마스터 계정 접속 |
 | `PG_ADMIN_USERNAME` / `PG_ADMIN_PASSWORD` | `postgres` / `postgres` | |
@@ -227,6 +238,8 @@ lily-cicd 의 `HttpDatabaseProvisioner` 가 배포할 때마다 아래를 수행
 | `MYSQL_ADMIN_URL` | `jdbc:mysql://localhost:3306/` | |
 | `MYSQL_ADMIN_USERNAME` / `MYSQL_ADMIN_PASSWORD` | `root` / `root` | |
 | `MYSQL_PUBLIC_HOST` / `MYSQL_PUBLIC_PORT` | `localhost` / `3306` | |
+| `SERVER_PORT` | `8080` | |
+| `APP_VERSION` / `APP_COLOR` | `dev` / `blue` | 로그의 `version`, `color` 필드 |
 
 `infra/` 에서 `terraform apply` 하면 AWS 용 값이 채워진 `infra/.env.aws` 가 생성된다.
 
@@ -266,12 +279,15 @@ cd infra
 ```
 자세한 순서는 [infra/README.md](infra/README.md).
 
+### k3s
+`deploy/k3s/db-provisioner.yaml` 로 lily-server 노드(`lily-system`)에 올린다. 설정은 Secret `db-provisioner-env` (`infra/.env.aws` 로 생성). 순서는 [deploy/k3s/README.md](deploy/k3s/README.md).
+
 ---
 
 ## 8. 검증 결과
 
-### 자동 테스트 (10개, DynamoDB Local)
-생성·조회·삭제, 중복 409, 동시 요청 8개 중 1개만 성공, 꺼진 엔진 400, 입력 검증 400, 토큰 401, 생성 실패 시 롤백 후 재시도, 삭제 시 DB·가드 아이템 모두 제거
+### 자동 테스트 (15개, DynamoDB Local)
+생성·조회·삭제, 중복 409, 동시 요청 8개 중 1개만 성공, 꺼진 엔진 400, 입력 검증 400, 토큰 401, 인코딩된 경로로 토큰 우회 불가, 헬스체크는 토큰 없이, 생성 실패 시 롤백 후 재시도, 삭제 시 DB·가드 아이템 모두 제거, 다른 DB 를 가리키는 가드는 남김, 엔진 목록, 엔진별 env 형식
 
 ### 로컬 Docker (PostgreSQL 16 / MySQL 8.4 컨테이너)
 - 다른 테넌트 DB 접근 거부 (두 엔진), 틀린 비밀번호 거부, 커넥션 제한 20 적용
