@@ -61,3 +61,9 @@ provisioner:
       admin-password: ${MYSQL_ADMIN_PASSWORD:root}
       public-host: ${MYSQL_PUBLIC_HOST:localhost}
       public-port: ${MYSQL_PUBLIC_PORT:3306}
+  # 무중단 스키마 변경. lily-cicd 가 pgroll 마이그레이션을 처음 적용하기 전에 POST /api/databases/{id}/pgroll 을 부른다
+  pgroll:
+    binary: ${PGROLL_BINARY:pgroll}
+    # RDS 는 require, 로컬 Postgres 컨테이너는 disable
+    sslmode: ${PGROLL_SSLMODE:require}
+    timeout-seconds: 60

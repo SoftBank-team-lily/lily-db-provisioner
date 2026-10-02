@@ -118,6 +118,19 @@ public class DatabaseService {
         return env;
     }
 
+    /**
+     * 무중단 스키마 변경(pgroll)을 켠다. lily-cicd 가 pgroll 마이그레이션을 처음 적용하기 전에 부른다.
+     * 이미 켜져 있으면 권한만 다시 준다.
+     */
+    public void enablePgroll(String id) {
+        ManagedDatabase db = get(id);
+        if (db.status() != DatabaseStatus.AVAILABLE) {
+            throw new DatabaseNotReadyException(id, db.status());
+        }
+        engines.get(db.engine()).enablePgroll(db.dbName());
+        log.info("pgroll enabled: id={} project={} name={}", id, db.projectId(), db.dbName());
+    }
+
     /** drop 은 IF EXISTS 라 실패 후 다시 호출해도 된다 */
     public void delete(String id) {
         ManagedDatabase db = get(id);

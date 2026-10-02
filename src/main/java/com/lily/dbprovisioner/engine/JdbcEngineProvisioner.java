@@ -73,6 +73,10 @@ abstract class JdbcEngineProvisioner implements EngineProvisioner, DisposableBea
         return env;
     }
 
+    protected EngineSettings settings() {
+        return settings;
+    }
+
     @Override
     public String publicHost() {
         return settings.publicHost();

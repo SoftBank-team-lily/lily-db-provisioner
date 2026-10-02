@@ -12,7 +12,7 @@ class EngineConfig {
     @Bean
     @ConditionalOnProperty(name = "provisioner.engines.postgres.enabled", havingValue = "true")
     PostgresProvisioner postgresProvisioner(ProvisionerProperties props) {
-        return new PostgresProvisioner(props.engine("postgres"));
+        return new PostgresProvisioner(props.engine("postgres"), props.pgroll());
     }
 
     @Bean
