@@ -13,7 +13,8 @@ data "aws_iam_policy_document" "provisioner" {
       "dynamodb:Scan",
       "dynamodb:DescribeTable",
     ]
-    resources = [aws_dynamodb_table.managed_databases.arn]
+    # 옮기는 동안 되돌릴 수 있게 옛 테이블도 둔다 (GCP provisioner 는 따로 자격증명을 쓴다)
+    resources = [aws_dynamodb_table.managed_databases_aws.arn, aws_dynamodb_table.managed_databases.arn]
   }
 
   statement {

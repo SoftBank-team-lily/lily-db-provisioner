@@ -13,7 +13,7 @@
 | 구분 | 저장소 |
 |---|---|
 | 사용자 앱 DB | 공용 RDS (PostgreSQL / MySQL), 프로젝트마다 database + 계정 |
-| 플랫폼 메타데이터 | DynamoDB `lily-managed-databases` |
+| 플랫폼 메타데이터 | DynamoDB `lily-managed-databases-aws` (AWS provisioner), `lily-managed-databases` (GCP provisioner) |
 | 테넌트 비밀번호 | SSM Parameter Store (SecureString) |
 
 ---
@@ -27,7 +27,7 @@
 - 메타데이터 DynamoDB 저장, 프로젝트당 DB 1개 보장 (동시 요청 포함)
 - 비밀번호 SSM 저장 (로컬은 메모리)
 - 내부 API 토큰 인증, 헬스체크 (`dynamodb`, `engines`)
-- Terraform: 공용 RDS, DynamoDB 테이블(`lily-managed-databases`, `lily-builds`), IAM 정책(프로비저너, lily-builder), lily-server 인스턴스 역할, 예산 알림 (`infra/`)
+- Terraform: 공용 RDS, DynamoDB 테이블(`lily-managed-databases-aws`, `lily-managed-databases`, `lily-builds`), IAM 정책(프로비저너, lily-builder), lily-server 인스턴스 역할, 예산 알림 (`infra/`)
 - 실제 AWS 검증 스크립트 (`infra/smoke-test.sh`)
 
 ### 실환경 통합 검증 (2026-09-30)
@@ -231,7 +231,7 @@ lily-cicd 의 `HttpDatabaseProvisioner` 가 배포할 때마다 아래를 수행
 | `SPRING_PROFILES_ACTIVE` | `local` (이미지는 `prod`) | `local`: DynamoDB Local + 테이블 자동 생성, 사람이 읽는 로그 / `prod`: AWS, JSON 로그 |
 | `PROVISIONER_API_TOKEN` | (없음) | 운영 필수. 비어 있으면 인증 꺼짐 (`prod` 는 기동 실패) |
 | `AWS_REGION` | `ap-northeast-2` | 자격증명은 AWS 기본 체인 (운영은 인스턴스 역할) |
-| `DYNAMODB_TABLE` | `lily-managed-databases` | |
+| `DYNAMODB_TABLE` | `lily-managed-databases` | provisioner 마다 다른 테이블을 쓴다. 운영 AWS 는 `lily-managed-databases-aws`, GCP 는 `lily-managed-databases`. 같이 쓰면 `PROJECT#{projectId}` 가드 때문에 한 앱이 두 클라우드에 DB 를 가질 수 없다 |
 | `DYNAMODB_ENDPOINT` | (없음, `local` 은 `http://localhost:8000`) | 비우면 AWS |
 | `DYNAMODB_CREATE_TABLE` | `false` (`local` 은 `true`) | 로컬 전용 |
 | `SECRET_STORE` | `memory` | `memory` / `ssm` |

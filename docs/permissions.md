@@ -37,7 +37,7 @@ Team Lily 플랫폼(k3s + AWS)의 권한이 어디에 있고 어떻게 분리되
 
 | 정책 | 권한 | 범위 | 쓰는 곳 |
 |---|---|---|---|
-| `lily-db-provisioner` | `dynamodb:GetItem, PutItem, UpdateItem, DeleteItem, Scan, DescribeTable` | `lily-managed-databases` 테이블 | db-provisioner 메타데이터 |
+| `lily-db-provisioner` | `dynamodb:GetItem, PutItem, UpdateItem, DeleteItem, Scan, DescribeTable` | `lily-managed-databases-aws` (운영), `lily-managed-databases` (전환 중 되돌리기용) 테이블 | db-provisioner 메타데이터 |
 | | `ssm:PutParameter, GetParameter, DeleteParameter` | `parameter/lily/db/*` | 테넌트 DB 비밀번호 |
 | `lily-builder` | `dynamodb:GetItem, PutItem, Scan, DescribeTable` | `lily-builds` 테이블 | 빌드 이력 |
 | | `ecr:CreateRepository` | 이 계정의 ECR 저장소 | 앱별 ECR 저장소 생성 |
