@@ -21,7 +21,7 @@
 ## 1. 현재 상태
 
 ### 구현 완료
-- REST API: 엔진 목록, DB 생성·조회·목록·삭제, 접속 정보(env) 조회
+- REST API: 엔진 목록, DB 생성·조회·목록·삭제, 접속 정보(env) 조회, pgroll 켜기
 - 엔진: PostgreSQL, MySQL (환경변수로 각각 on/off)
 - 테넌트 격리, 계정당 커넥션 제한, 기본 DB 잠금 (PostgreSQL)
 - 메타데이터 DynamoDB 저장, 프로젝트당 DB 1개 보장 (동시 요청 포함)
@@ -37,6 +37,13 @@ k3s(lily-server + worker 2) 에 세 모듈을 올리고 `lily-builder → lily-c
 - 재배포(blue → green) 시 같은 DB 재사용, 데이터 유지
 - 처음 보는 appName(`blog2`)도 ECR 저장소 자동 생성부터 접속까지 한 번에 성공
 - 클러스터 공용 설정(ECR 인증, ingress-nginx, lily-server 역할)은 [deploy/k3s/cluster/README.md](deploy/k3s/cluster/README.md)
+
+### 무중단 스키마 변경 (pgroll, 2026-10-03)
+lily-cicd 가 pgroll 마이그레이션을 처음 적용하기 전에 `POST /api/databases/{id}/pgroll` 을 부른다.
+`pgroll init` 은 이벤트 트리거(`pg_roll_handle_ddl`, `pg_roll_handle_drop`)를 만들어서 프로젝트 계정으로는 안 된다 (permission denied to create event trigger).
+그래서 이 모듈이 관리자 계정(RDS `rds_superuser`)으로 프로젝트 DB 에 init 하고, 프로젝트 계정에 `pgroll` 스키마의 USAGE·CREATE, 테이블·시퀀스 ALL, 함수 EXECUTE 를 준다.
+이벤트 트리거 함수는 SECURITY DEFINER 라 프로젝트 계정이 실행한 DDL 도 pgroll 이력에 남는다. 이후 start / complete / rollback 은 lily-cicd 가 프로젝트 계정으로 한다.
+공용 RDS 에서 init 부터 블루그린·카나리 배포, 전환 후 롤백, complete 까지 확인했다 (lily-cicd `docs/schema-migration.md` 7.6).
 
 ### 권한 구조
 AWS 권한은 lily-server 에만 있고, 사용자 코드(앱·빌드)는 AWS 자격증명이 없는 worker 에서만 돈다. 플랫폼 API 는 사용자 앱에서 호출할 수 없다. 노드·IAM·RBAC·네트워크·비밀값별 상세는 [docs/permissions.md](docs/permissions.md).
@@ -127,6 +134,7 @@ lily-cicd 의 `HttpDatabaseProvisioner` 가 배포할 때마다 아래를 수행
 | GET | `/api/databases?projectId=blog` | 목록 (projectId 생략 시 전체) |
 | GET | `/api/databases/{id}` | 상태 조회 (비밀번호 없음) |
 | GET | `/api/databases/{id}/env?host=&port=` | 앱에 주입할 환경변수 (비밀번호 포함). `host`/`port` 를 주면 접속 주소만 바꾼다 (온프레미스 터널) |
+| POST | `/api/databases/{id}/pgroll` | pgroll 켜기 (postgres). 관리자 계정으로 `pgroll init` 후 프로젝트 계정에 `pgroll` 스키마 권한을 준다. 이미 켜져 있으면 권한만 다시 준다 → `200 {"databaseId","pgroll":"enabled"}`. lily-cicd 가 pgroll 마이그레이션 전에 부른다 |
 | DELETE | `/api/databases/{id}` | 삭제 → `204` |
 
 `POST /api/databases` 응답
@@ -238,6 +246,7 @@ lily-cicd 의 `HttpDatabaseProvisioner` 가 배포할 때마다 아래를 수행
 | `MYSQL_ADMIN_URL` | `jdbc:mysql://localhost:3306/` | |
 | `MYSQL_ADMIN_USERNAME` / `MYSQL_ADMIN_PASSWORD` | `root` / `root` | |
 | `MYSQL_PUBLIC_HOST` / `MYSQL_PUBLIC_PORT` | `localhost` / `3306` | |
+| `PGROLL_BINARY` / `PGROLL_SSLMODE` | `pgroll` / `require` | pgroll CLI (이미지에 v0.16.3 포함). 로컬 Postgres 컨테이너는 `disable` |
 | `SERVER_PORT` | `8080` | |
 | `APP_VERSION` / `APP_COLOR` | `dev` / `blue` | 로그의 `version`, `color` 필드 |
 
