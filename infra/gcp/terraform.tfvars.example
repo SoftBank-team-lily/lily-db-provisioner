@@ -1,0 +1,5 @@
+project_id        = "your-gcp-project"
+region            = "asia-northeast3"
+ssh_source_ranges = ["203.0.113.10/32"]
+# tunnel_ca_public_key = "ssh-ed25519 AAAA... lily-tunnel-ca"
+# enable_mysql = true

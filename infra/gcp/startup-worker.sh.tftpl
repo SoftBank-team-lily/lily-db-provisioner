@@ -1,0 +1,21 @@
+#!/bin/bash
+set -eux
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y iptables curl
+cat >/etc/systemd/system/lily-ingress-redirect.service <<'UNIT'
+[Unit]
+Description=Redirect public 80 and 443 to ingress-nginx NodePorts
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c '/sbin/iptables -t nat -C PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports ${node_port_http} || /sbin/iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports ${node_port_http}'
+ExecStart=/bin/sh -c '/sbin/iptables -t nat -C PREROUTING -p tcp --dport 443 -j REDIRECT --to-ports ${node_port_https} || /sbin/iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-ports ${node_port_https}'
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl enable --now lily-ingress-redirect.service
+curl -sfL https://get.k3s.io | K3S_TOKEN='${token}' K3S_URL='https://${server_ip}:6443' sh -s - agent

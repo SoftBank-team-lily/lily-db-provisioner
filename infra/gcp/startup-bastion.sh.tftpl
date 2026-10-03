@@ -1,0 +1,20 @@
+#!/bin/bash
+set -eux
+id lily-tunnel >/dev/null 2>&1 || useradd --create-home --shell /usr/sbin/nologin lily-tunnel
+install -d -o lily-tunnel -g lily-tunnel -m 700 /home/lily-tunnel/.ssh
+if [ -n '${ca_public_key}' ]; then
+  printf '%s\n' 'cert-authority ${ca_public_key}' > /home/lily-tunnel/.ssh/authorized_keys
+  chown lily-tunnel:lily-tunnel /home/lily-tunnel/.ssh/authorized_keys
+  chmod 600 /home/lily-tunnel/.ssh/authorized_keys
+fi
+cat >/etc/ssh/sshd_config.d/lily-tunnel.conf <<'EOF'
+Match User lily-tunnel
+  AllowTcpForwarding yes
+%{ if mysql_ip == "" ~}
+  PermitOpen ${postgres_ip}:5432
+%{ else ~}
+  PermitOpen ${postgres_ip}:5432 ${mysql_ip}:3306
+%{ endif ~}
+  ForceCommand /bin/false
+EOF
+systemctl reload ssh || systemctl reload sshd

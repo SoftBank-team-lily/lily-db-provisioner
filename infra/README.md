@@ -1,5 +1,7 @@
 # infra — 공용 RDS + 메타데이터 테이블
 
+GCP 데이터 플레인(k3s, Cloud SQL, Artifact Registry, 배스천)은 [`gcp/`](gcp/README.md) 이다. 이 디렉터리의 AWS 루트를 운영 계정에 빈 state 로 apply 하면 새 RDS 가 생긴다. 이미 있는 인스턴스를 이 코드에 붙이려면 import 가 먼저다.
+
 프로비저너를 실제 AWS 에서 검증하기 위한 최소 인프라.
 Terraform / AWS CLI 는 Docker 로 실행하므로 로컬 설치가 필요 없다 (`tf.sh`, `aws.sh`).
 `tf.sh` 는 provider 바이너리를 Docker 볼륨(`lily-tfdata`)에 둔다. OneDrive 같은 동기화 폴더에 두면 플러그인 기동이 타임아웃난다.

@@ -1,0 +1,32 @@
+#!/bin/bash
+set -eux
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y iptables curl
+install -d /etc/systemd/system
+cat >/etc/systemd/system/lily-ingress-redirect.service <<'UNIT'
+[Unit]
+Description=Redirect public 80 and 443 to ingress-nginx NodePorts
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c '/sbin/iptables -t nat -C PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports ${node_port_http} || /sbin/iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports ${node_port_http}'
+ExecStart=/bin/sh -c '/sbin/iptables -t nat -C PREROUTING -p tcp --dport 443 -j REDIRECT --to-ports ${node_port_https} || /sbin/iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-ports ${node_port_https}'
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl enable --now lily-ingress-redirect.service
+curl -sfL https://get.k3s.io | K3S_TOKEN='${token}' sh -s - server --disable traefik --tls-san '${ingress_ip}' --node-taint node-role.kubernetes.io/control-plane:NoSchedule
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+for _ in $(seq 1 60); do
+  kubectl get nodes && break
+  sleep 5
+done
+kubectl apply -f '${manifest}'
+kubectl -n ingress-nginx patch svc ingress-nginx-controller --type json -p '[
+  {"op":"replace","path":"/spec/ports/0/nodePort","value":${node_port_http}},
+  {"op":"replace","path":"/spec/ports/1/nodePort","value":${node_port_https}}
+]' || true
