@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -51,6 +52,13 @@ public class DatabaseController {
                                        @RequestParam(required = false) String host,
                                        @RequestParam(required = false) Integer port) {
         return new DatabaseDto.EnvResponse(id, service.env(id, host, port));
+    }
+
+    /** pgroll 상태 스키마와 이벤트 트리거를 관리자 계정으로 만든다. postgres 만. 여러 번 불러도 된다 */
+    @PostMapping("/databases/{id}/pgroll")
+    public Map<String, String> enablePgroll(@PathVariable String id) {
+        service.enablePgroll(id);
+        return Map.of("databaseId", id, "pgroll", "enabled");
     }
 
     @DeleteMapping("/databases/{id}")

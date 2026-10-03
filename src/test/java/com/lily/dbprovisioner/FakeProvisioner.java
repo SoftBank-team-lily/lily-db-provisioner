@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 class FakeProvisioner implements EngineProvisioner {
 
     final Set<String> created = ConcurrentHashMap.newKeySet();
+    final Set<String> pgroll = ConcurrentHashMap.newKeySet();
     volatile boolean failNextCreate;
 
     @Override
@@ -42,6 +43,11 @@ class FakeProvisioner implements EngineProvisioner {
     @Override
     public void drop(String name) {
         created.remove(name);
+    }
+
+    @Override
+    public void enablePgroll(String name) {
+        pgroll.add(name);
     }
 
     @Override

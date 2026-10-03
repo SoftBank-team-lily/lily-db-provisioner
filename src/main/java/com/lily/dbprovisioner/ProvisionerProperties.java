@@ -12,7 +12,18 @@ public record ProvisionerProperties(
         @DefaultValue("3") int appPoolSize,
         @DefaultValue Dynamodb dynamodb,
         @DefaultValue Secrets secrets,
-        Map<String, EngineSettings> engines) {
+        Map<String, EngineSettings> engines,
+        @DefaultValue Pgroll pgroll) {
+
+    /**
+     * 프로젝트 DB 에 pgroll 을 켤 때 쓰는 CLI. init 은 이벤트 트리거를 만들어서 관리자 계정으로만 된다.
+     *
+     * @param sslmode lib/pq 값. RDS 는 require, 로컬 컨테이너는 disable
+     */
+    public record Pgroll(
+            @DefaultValue("pgroll") String binary,
+            @DefaultValue("require") String sslmode,
+            @DefaultValue("60") int timeoutSeconds) {}
 
     /**
      * 메타데이터 테이블.

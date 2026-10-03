@@ -72,6 +72,7 @@ class DatabaseApiTest {
     void clean() {
         items().forEach(item -> dynamo.deleteItem(r -> r.tableName(TABLE).key(Map.of("pk", item.get("pk")))));
         fake.created.clear();
+        fake.pgroll.clear();
         fake.failNextCreate = false;
     }
 
@@ -99,6 +100,22 @@ class DatabaseApiTest {
         repository.delete(old);
 
         assertThat(repository.findByProjectId("blog")).map(ManagedDatabase::id).contains(currentId);
+    }
+
+    @Test
+    void pgroll_활성화를_두번_호출해도_200_없는_DB는_404() throws Exception {
+        JsonNode created = create("blog", "postgres");
+        String id = created.get("id").asText();
+
+        for (int i = 0; i < 2; i++) {
+            mvc.perform(auth(post("/api/databases/" + id + "/pgroll")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.pgroll").value("enabled"));
+        }
+        assertThat(fake.pgroll).containsExactly(created.get("dbName").asText());
+
+        mvc.perform(auth(post("/api/databases/" + UUID.randomUUID() + "/pgroll")))
+                .andExpect(status().isNotFound());
     }
 
     @Test

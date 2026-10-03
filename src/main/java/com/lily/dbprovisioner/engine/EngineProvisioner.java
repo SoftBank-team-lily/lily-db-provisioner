@@ -27,6 +27,16 @@ public interface EngineProvisioner {
 
     void drop(String name);
 
+    /**
+     * 프로젝트 DB 에 pgroll 상태 스키마와 이벤트 트리거를 만들고 프로젝트 계정에 권한을 준다.
+     * 여러 번 호출해도 안전해야 한다. 이후 마이그레이션(start/complete/rollback)은 프로젝트 계정으로 돈다.
+     *
+     * @throws IllegalArgumentException pgroll 을 지원하지 않는 엔진
+     */
+    default void enablePgroll(String name) {
+        throw new IllegalArgumentException(engine().code() + " 는 pgroll 을 지원하지 않는다 (postgres 만)");
+    }
+
     /** 관리자 접속이 살아 있는지 (헬스체크용) */
     boolean ping();
 
