@@ -7,7 +7,7 @@ output "mysql_endpoint" {
 }
 
 output "dynamodb_table" {
-  value = aws_dynamodb_table.managed_databases.name
+  value = aws_dynamodb_table.managed_databases_aws.name
 }
 
 output "provisioner_policy_arn" {
@@ -22,7 +22,7 @@ resource "local_sensitive_file" "provisioner_env" {
     "SPRING_PROFILES_ACTIVE=prod",
     "PROVISIONER_API_TOKEN=${random_password.api_token.result}",
     "AWS_REGION=${var.region}",
-    "DYNAMODB_TABLE=${aws_dynamodb_table.managed_databases.name}",
+    "DYNAMODB_TABLE=${aws_dynamodb_table.managed_databases_aws.name}",
     "SECRET_STORE=ssm",
     "SSM_PREFIX=/lily/db",
     var.enable_postgres ? "PG_ENABLED=true" : "",
