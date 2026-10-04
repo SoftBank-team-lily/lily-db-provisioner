@@ -94,7 +94,7 @@ spec:
       port: 5432
       targetPort: 5432
 ---
-# 사용자 앱이 뜨는 default namespace 에서만 릴레이에 붙는다 (같은 namespace 의 Kaniko 빌드 Job 은 막는다)
+# 사용자 앱(default)과 lily-cicd(lily-system, pgroll 최신 버전 조회)만 릴레이에 붙는다 (같은 namespace 의 Kaniko 빌드 Job 은 막는다)
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -110,5 +110,8 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: default
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: lily-system
       ports:
         - port: 5432
