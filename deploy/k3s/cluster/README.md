@@ -12,6 +12,7 @@
 | lily-server 전용 | taint `node-role.kubernetes.io/control-plane:NoSchedule`. AWS 가 필요한 플랫폼 Pod 만 toleration 으로 올라간다 | `kubectl taint node <lily-server> node-role.kubernetes.io/control-plane=true:NoSchedule` |
 | lily-server 역할 | `lily-server-role` (ECR PowerUser, CloudWatch, `lily-db-provisioner`, `lily-builder`) | `infra/` 에서 `create_server_role = true` 로 apply 후 `aws ec2 replace-iam-instance-profile-association` |
 | worker AWS 차단 | IMDS hop limit 1, 역할(`lily-ec2-role`)은 CloudWatch 만 | `aws ec2 modify-instance-metadata-options --http-put-response-hop-limit 1`, `aws iam detach-role-policy` |
+| GCP DB 릴레이 | 멀티클라우드 앱(AWS + GCP)의 AWS 쪽 Pod 가 GCP Cloud SQL 에 붙는 `db-relay-gcp` (`lily-builds`, replicas 2). GCP 배스천으로 `ssh -L` 을 열어 둔다. 키·인증서는 lily-builder 가 Secret `db-relay-gcp` 에 두고 6시간마다 다시 서명한다. `default` namespace 에서만 붙는다 | `kubectl apply -f db-relay-gcp.yaml` (builder 가 Secret 을 만든 뒤 Ready) |
 
 ## 주의
 
