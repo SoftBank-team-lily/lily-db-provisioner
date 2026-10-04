@@ -59,6 +59,14 @@ AWS 권한은 lily-server 에만 있고, 사용자 코드(앱·빌드)는 AWS �
 - 실행 전 authorized_keys 에 `cert-authority` 줄이 있어야 한다 (없으면 중단). 포트 범위 보안그룹(VPC 내부만)은 따로 연다
 - `db-tunnel-user.sh` 를 다시 실행하면 authorized_keys 를 덮어쓰므로 `lily-tunnel-reverse.sh` 도 다시 실행한다
 
+### 멀티클라우드 (AWS + GCP) DB 릴레이
+멀티클라우드 앱(lily-builder `cloudProvider: MULTI`)은 DB 가 GCP Cloud SQL 하나다. GCP 쪽 provisioner 가 DB 를 만들고, AWS 쪽 Pod 는 Cloud SQL 사설 IP 에 닿지 않으므로 AWS 클러스터의 릴레이로 붙는다.
+- `db-relay-gcp` (lily-builds, replicas 2, [db-relay-gcp.yaml](deploy/k3s/cluster/db-relay-gcp.yaml)): GCP 배스천(`lily-tunnel`)으로 `ssh -N -g -L 0.0.0.0:5432:{Cloud SQL}` 를 열고 끊기면 다시 연다
+- 키·인증서: lily-builder `DatabaseRelay` 가 Secret `db-relay-gcp` 에 둔다. key ID `relay-gcp`, `-L` 만, 24시간 인증서를 6시간마다 다시 서명한다. 열린 ssh 는 만료와 상관없이 유지되고 다시 붙을 때 새 인증서를 쓴다
+- AWS 앱의 접속 정보: lily-builder 가 GCP provisioner `/env?host=db-relay-gcp.lily-builds.svc.cluster.local&port=5432` 로 받아 `databaseEnv` 로 넘긴다. 이 모듈의 AWS 쪽은 부르지 않는다
+- NetworkPolicy: `default`(사용자 앱)와 `lily-system`(lily-cicd 의 `pgroll latest` 조회)에서만 붙는다. 같은 namespace 의 Kaniko 빌드 Job 은 막는다
+- 한 앱이 RDS 와 Cloud SQL 에 DB 를 동시에 가질 수 있도록 provisioner 마다 메타데이터 테이블을 나눴다 (AWS `lily-managed-databases-aws`, GCP `lily-managed-databases`)
+
 ### 아직 안 된 것
 - **MySQL 실환경 검증**: 로컬 Docker(MySQL 8.4) 에서만 확인. RDS MySQL 은 `enable_mysql = true` 로 띄워서 검증 필요
 
